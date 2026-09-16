@@ -15,7 +15,15 @@ export default function Matches() {
 
       console.log("BangBet254 matches:", data);
 
-      setMatches(Array.isArray(data) ? data : []);
+      const sortedMatches = Array.isArray(data)
+        ? [...data].sort(
+            (a, b) =>
+              new Date(a.scheduled_at).getTime() -
+              new Date(b.scheduled_at).getTime()
+          )
+        : [];
+
+      setMatches(sortedMatches);
     } catch (err) {
       console.error("BangBet254 matches error:", err);
 
@@ -140,7 +148,14 @@ export default function Matches() {
                   <span>
                     {new Date(
                       match.scheduled_at
-                    ).toLocaleString()}
+                    ).toLocaleString("en-KE", {
+                      timeZone: "Africa/Nairobi",
+                      day: "2-digit",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: true,
+                    })}
                   </span>
                 )}
               </div>
