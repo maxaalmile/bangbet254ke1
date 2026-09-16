@@ -1,0 +1,566 @@
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+
+export default function Register() {
+  const navigate = useNavigate();
+  const { register } = useAuth();
+
+  const [form, setForm] = useState({
+    phone: "",
+    password: "",
+  });
+
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  function handleChange(event) {
+    setForm({
+      ...form,
+      [event.target.name]: event.target.value,
+    });
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setError("");
+
+    const phone = form.phone.trim();
+
+    if (!phone) {
+      setError("Please enter your phone number.");
+      return;
+    }
+
+    if (form.password.length < 8) {
+      setError("Your password must contain at least 8 characters.");
+      return;
+    }
+
+    if (form.password !== confirmPassword) {
+      setError("Your passwords do not match.");
+      return;
+    }
+
+    if (!termsAccepted) {
+      setError("Please accept the Terms & Conditions to continue.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await register({
+        phone,
+        password: form.password,
+        terms_accepted: true,
+        terms_version: "2026-09-01",
+      });
+
+      navigate("/dashboard");
+    } catch (err) {
+      const detail = err.response?.data?.detail;
+
+      if (Array.isArray(detail)) {
+        setError(
+          detail
+            .map((item) => item.msg || "Invalid input")
+            .join(", ")
+        );
+      } else {
+        setError(
+          detail ||
+            err.message ||
+            "Unable to create your account. Please try again."
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div style={pageStyle}>
+      <div style={glowTop}></div>
+      <div style={glowBottom}></div>
+
+      <main style={wrapperStyle}>
+        <section style={cardStyle}>
+          <div style={brandWrap}>
+            <div style={brandIcon}>B</div>
+
+            <div>
+              <div style={brandName}>BangBet254</div>
+              <div style={brandTagline}>PLAY • BET • WIN</div>
+            </div>
+          </div>
+
+          <div style={headingWrap}>
+            <h1 style={headingStyle}>Create your account</h1>
+
+            <p style={subtitleStyle}>
+              Join BangBet254 and start your betting journey today.
+            </p>
+          </div>
+
+          {error && (
+            <div style={errorStyle}>
+              <span style={errorIcon}>!</span>
+              <span>{error}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit}>
+            <label htmlFor="register-phone" style={labelStyle}>
+              Phone number
+            </label>
+
+            <div style={inputWrap}>
+              <span style={inputIcon}>📱</span>
+
+              <input
+                id="register-phone"
+                type="tel"
+                name="phone"
+                value={form.phone}
+                onChange={handleChange}
+                placeholder="254700000000"
+                required
+                autoComplete="tel"
+                style={inputWithIconStyle}
+              />
+            </div>
+
+            <label htmlFor="register-password" style={labelStyle}>
+              Password
+            </label>
+
+            <div style={inputWrap}>
+              <span style={inputIcon}>🔒</span>
+
+              <input
+                id="register-password"
+                type={showPassword ? "text" : "password"}
+                name="password"
+                value={form.password}
+                onChange={handleChange}
+                placeholder="At least 8 characters"
+                required
+                autoComplete="new-password"
+                style={{
+                  ...inputWithIconStyle,
+                  paddingRight: "52px",
+                }}
+              />
+
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={passwordButtonStyle}
+                aria-label={
+                  showPassword ? "Hide password" : "Show password"
+                }
+              >
+                {showPassword ? "🙈" : "👁"}
+              </button>
+            </div>
+
+            <label htmlFor="confirm-password" style={labelStyle}>
+              Confirm password
+            </label>
+
+            <div style={inputWrap}>
+              <span style={inputIcon}>🔐</span>
+
+              <input
+                id="confirm-password"
+                type={showConfirmPassword ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(event) =>
+                  setConfirmPassword(event.target.value)
+                }
+                placeholder="Repeat your password"
+                required
+                autoComplete="new-password"
+                style={{
+                  ...inputWithIconStyle,
+                  paddingRight: "52px",
+                }}
+              />
+
+              <button
+                type="button"
+                onClick={() =>
+                  setShowConfirmPassword(!showConfirmPassword)
+                }
+                style={passwordButtonStyle}
+                aria-label={
+                  showConfirmPassword
+                    ? "Hide password"
+                    : "Show password"
+                }
+              >
+                {showConfirmPassword ? "🙈" : "👁"}
+              </button>
+            </div>
+
+            <label style={termsStyle}>
+              <input
+                type="checkbox"
+                checked={termsAccepted}
+                onChange={(event) =>
+                  setTermsAccepted(event.target.checked)
+                }
+                style={checkboxStyle}
+              />
+
+              <span>
+                I agree to the{" "}
+                <a href="/terms" style={termsLinkStyle}>
+                  Terms & Conditions
+                </a>{" "}
+                and{" "}
+                <a href="/privacy" style={termsLinkStyle}>
+                  Privacy Policy
+                </a>
+                .
+              </span>
+            </label>
+
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                ...buttonStyle,
+                opacity: loading ? 0.7 : 1,
+                cursor: loading ? "not-allowed" : "pointer",
+              }}
+            >
+              {loading ? (
+                <>
+                  <span style={spinnerStyle}></span>
+                  Creating account...
+                </>
+              ) : (
+                <>
+                  Create Account
+                  <span style={arrowStyle}>→</span>
+                </>
+              )}
+            </button>
+          </form>
+
+          <div style={dividerStyle}>
+            <span style={dividerLine}></span>
+            <span style={dividerText}>Already registered?</span>
+            <span style={dividerLine}></span>
+          </div>
+
+          <Link to="/login" style={secondaryButtonStyle}>
+            Login to your account
+          </Link>
+
+          <div style={secureText}>
+            <span>🔒</span>
+            <span>Your account information is securely protected.</span>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+const pageStyle = {
+  minHeight: "100vh",
+  position: "relative",
+  overflow: "hidden",
+  background:
+    "radial-gradient(circle at top left, #123b2d 0%, #071c16 30%, #050b0a 65%, #030605 100%)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "30px 16px",
+  boxSizing: "border-box",
+  fontFamily:
+    "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+};
+
+const glowTop = {
+  position: "absolute",
+  width: "420px",
+  height: "420px",
+  borderRadius: "50%",
+  background: "rgba(35, 197, 94, 0.10)",
+  filter: "blur(80px)",
+  top: "-180px",
+  right: "-120px",
+};
+
+const glowBottom = {
+  position: "absolute",
+  width: "360px",
+  height: "360px",
+  borderRadius: "50%",
+  background: "rgba(16, 185, 129, 0.08)",
+  filter: "blur(80px)",
+  bottom: "-180px",
+  left: "-120px",
+};
+
+const wrapperStyle = {
+  width: "100%",
+  maxWidth: "470px",
+  position: "relative",
+  zIndex: 2,
+};
+
+const cardStyle = {
+  width: "100%",
+  boxSizing: "border-box",
+  padding: "34px 32px",
+  borderRadius: "24px",
+  background: "rgba(9, 20, 17, 0.94)",
+  border: "1px solid rgba(74, 222, 128, 0.14)",
+  boxShadow:
+    "0 30px 80px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.03)",
+  backdropFilter: "blur(18px)",
+};
+
+const brandWrap = {
+  display: "flex",
+  alignItems: "center",
+  gap: "12px",
+  marginBottom: "30px",
+};
+
+const brandIcon = {
+  width: "45px",
+  height: "45px",
+  borderRadius: "13px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  background: "linear-gradient(135deg, #22c55e, #16a34a)",
+  color: "#04130b",
+  fontSize: "24px",
+  fontWeight: 900,
+  boxShadow: "0 10px 25px rgba(34,197,94,0.22)",
+};
+
+const brandName = {
+  color: "#ffffff",
+  fontSize: "20px",
+  fontWeight: 900,
+  letterSpacing: "-0.4px",
+};
+
+const brandTagline = {
+  color: "#4ade80",
+  fontSize: "9px",
+  fontWeight: 800,
+  letterSpacing: "2px",
+  marginTop: "2px",
+};
+
+const headingWrap = {
+  marginBottom: "26px",
+};
+
+const headingStyle = {
+  margin: 0,
+  color: "#ffffff",
+  fontSize: "31px",
+  lineHeight: 1.15,
+  fontWeight: 900,
+  letterSpacing: "-1px",
+};
+
+const subtitleStyle = {
+  margin: "10px 0 0",
+  color: "#94a3b8",
+  fontSize: "14px",
+  lineHeight: 1.6,
+};
+
+const errorStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: "10px",
+  padding: "12px 14px",
+  marginBottom: "20px",
+  borderRadius: "12px",
+  background: "rgba(239,68,68,0.10)",
+  border: "1px solid rgba(239,68,68,0.22)",
+  color: "#fca5a5",
+  fontSize: "13px",
+  fontWeight: 600,
+};
+
+const errorIcon = {
+  width: "22px",
+  height: "22px",
+  borderRadius: "50%",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  background: "rgba(239,68,68,0.18)",
+  color: "#f87171",
+  fontWeight: 900,
+  flexShrink: 0,
+};
+
+const labelStyle = {
+  display: "block",
+  color: "#e2e8f0",
+  fontSize: "13px",
+  fontWeight: 700,
+  marginBottom: "8px",
+};
+
+const inputWrap = {
+  position: "relative",
+  marginBottom: "18px",
+};
+
+const inputIcon = {
+  position: "absolute",
+  left: "14px",
+  top: "50%",
+  transform: "translateY(-50%)",
+  fontSize: "16px",
+  opacity: 0.75,
+  zIndex: 2,
+};
+
+const inputWithIconStyle = {
+  width: "100%",
+  height: "52px",
+  boxSizing: "border-box",
+  padding: "0 15px 0 44px",
+  borderRadius: "13px",
+  border: "1px solid #263b33",
+  outline: "none",
+  background: "#0c1915",
+  color: "#ffffff",
+  fontSize: "14px",
+  transition: "border-color 0.2s, box-shadow 0.2s",
+};
+
+const passwordButtonStyle = {
+  position: "absolute",
+  right: "8px",
+  top: "50%",
+  transform: "translateY(-50%)",
+  border: "none",
+  background: "transparent",
+  color: "#94a3b8",
+  padding: "8px",
+  cursor: "pointer",
+  fontSize: "16px",
+};
+
+const termsStyle = {
+  display: "flex",
+  alignItems: "flex-start",
+  gap: "10px",
+  color: "#94a3b8",
+  fontSize: "12px",
+  lineHeight: 1.6,
+  margin: "4px 0 20px",
+  cursor: "pointer",
+};
+
+const checkboxStyle = {
+  width: "17px",
+  height: "17px",
+  marginTop: "1px",
+  accentColor: "#22c55e",
+  flexShrink: 0,
+};
+
+const termsLinkStyle = {
+  color: "#4ade80",
+  fontWeight: 700,
+  textDecoration: "none",
+};
+
+const buttonStyle = {
+  width: "100%",
+  minHeight: "52px",
+  border: "none",
+  borderRadius: "13px",
+  background: "linear-gradient(135deg, #22c55e, #16a34a)",
+  color: "#04130b",
+  fontSize: "14px",
+  fontWeight: 900,
+  letterSpacing: "0.2px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "10px",
+  boxShadow: "0 12px 28px rgba(34,197,94,0.20)",
+};
+
+const arrowStyle = {
+  fontSize: "19px",
+  lineHeight: 1,
+};
+
+const spinnerStyle = {
+  width: "15px",
+  height: "15px",
+  border: "2px solid rgba(4,19,11,0.3)",
+  borderTopColor: "#04130b",
+  borderRadius: "50%",
+  display: "inline-block",
+};
+
+const dividerStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: "10px",
+  margin: "25px 0 18px",
+};
+
+const dividerLine = {
+  flex: 1,
+  height: "1px",
+  background: "#20332c",
+};
+
+const dividerText = {
+  color: "#64748b",
+  fontSize: "11px",
+  whiteSpace: "nowrap",
+};
+
+const secondaryButtonStyle = {
+  width: "100%",
+  minHeight: "50px",
+  boxSizing: "border-box",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  borderRadius: "13px",
+  border: "1px solid #294238",
+  background: "rgba(255,255,255,0.02)",
+  color: "#e2e8f0",
+  textDecoration: "none",
+  fontSize: "14px",
+  fontWeight: 800,
+};
+
+const secureText = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "7px",
+  color: "#64748b",
+  fontSize: "10px",
+  marginTop: "20px",
+  textAlign: "center",
+};
