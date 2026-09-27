@@ -8,7 +8,12 @@ export default function Matches() {
 
   async function loadMatches() {
     try {
-      setLoading(true);
+      // Only show the full loading screen on the initial load.
+      // If matches already exist, keep them visible during any retry.
+      if (matches.length === 0) {
+        setLoading(true);
+      }
+
       setError("");
 
       const data = await getPublicMatches();
@@ -59,14 +64,14 @@ export default function Matches() {
         </p>
       </div>
 
-      {loading && (
+      {loading && matches.length === 0 && (
         <div className="empty-state">
           <h2>Loading matches...</h2>
           <p>Please wait while we connect to BangBet254.</p>
         </div>
       )}
 
-      {!loading && error && (
+      {!loading && error && matches.length === 0 && (
         <div className="error-box">
           <h2>Connection problem</h2>
           <p>{error}</p>
@@ -91,7 +96,7 @@ export default function Matches() {
         </div>
       )}
 
-      {!loading && !error && matches.length > 0 && (
+      {matches.length > 0 && (
         <div className="matches-grid">
           {matches.map((match) => (
             <article className="match-card" key={match.id}>
