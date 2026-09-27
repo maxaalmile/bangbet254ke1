@@ -717,51 +717,50 @@ export default function Matches() {
             }}
           >
             {matches.map((match) => (
-              <article
-                key={match.id}
-                style={{
-                  background: "#fff",
-
-                <div
+                <article
+                  key={match.id}
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                    marginBottom: "12px",
+                    background: "#fff",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "18px",
+                    padding: "18px",
+                    boxShadow:
+                      "0 5px 20px rgba(15,23,42,.06)",
                   }}
                 >
-                  <input
-                    type="checkbox"
-                    checked={selectedMatches.includes(match.id)}
-                    onChange={() => toggleMatchSelection(match.id)}
-                    disabled={saving}
+                  <div
                     style={{
-                      width: "20px",
-                      height: "20px",
-                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                      marginBottom: "12px",
                     }}
-                  />
-
-                  <label
-                    style={{
-                      fontSize: "13px",
-                      fontWeight: 800,
-                      color: "#64748b",
-                      cursor: "pointer",
-                    }}
-                    onClick={() => toggleMatchSelection(match.id)}
                   >
-                    Select match
-                  </label>
-                </div>
+                    <input
+                      type="checkbox"
+                      checked={selectedMatches.includes(match.id)}
+                      onChange={() => toggleMatchSelection(match.id)}
+                      disabled={saving}
+                      style={{
+                        width: "20px",
+                        height: "20px",
+                        cursor: "pointer",
+                      }}
+                    />
 
-                  border: "1px solid #e2e8f0",
-                  borderRadius: "18px",
-                  padding: "18px",
-                  boxShadow:
-                    "0 5px 20px rgba(15,23,42,.06)",
-                }}
-              >
+                    <label
+                      style={{
+                        fontSize: "13px",
+                        fontWeight: 800,
+                        color: "#64748b",
+                        cursor: "pointer",
+                      }}
+                      onClick={() => toggleMatchSelection(match.id)}
+                    >
+                      Select match
+                    </label>
+                  </div>
+
                 <div
                   style={{
                     display: "flex",
