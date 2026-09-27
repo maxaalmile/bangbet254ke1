@@ -1,12 +1,14 @@
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.api.admin import get_current_admin
 from app.core.database import get_db
 from app.models.league import League
 from app.models.match import Match
+from app.services.settlement import settle_match
 from app.models.team import Team
 from app.models.market import Market
 from app.models.odd import Odd
@@ -25,6 +27,10 @@ router = APIRouter(
     prefix="/api/admin/matches",
     tags=["Admin - Matches"],
 )
+
+
+class BulkMatchDeleteRequest(BaseModel):
+    match_ids: list[int]
 
 
 @router.post(
@@ -221,8 +227,15 @@ def update_score(
             detail="Match not found",
         )
 
+    if match.status == "ended":
+        raise HTTPException(
+            status_code=400,
+            detail="Final score cannot be changed after the match has been settled.",
+        )
+
     match.home_score = data.home_score
     match.away_score = data.away_score
+    match.final_score_entered = True
 
     db.commit()
     db.refresh(match)
@@ -267,11 +280,34 @@ def update_status(
             detail="Match not found",
         )
 
+    # A match cannot be ended before the admin explicitly enters the final score.
+    if new_status == "ended":
+        if not match.final_score_entered:
+            raise HTTPException(
+                status_code=400,
+                detail="Enter the final score before ending the match.",
+            )
+
+        # Prevent changing an already settled match through this endpoint.
+        if match.status == "ended":
+            raise HTTPException(
+                status_code=400,
+                detail="This match has already been ended and settled.",
+            )
+
     match.status = new_status
     match.is_live = new_status == "live"
 
     if new_status in {"ended", "cancelled"}:
         match.is_betting_open = False
+
+    if new_status == "ended":
+        settlement = settle_match(db, match)
+
+        db.commit()
+        db.refresh(match)
+
+        return match
 
     db.commit()
     db.refresh(match)
@@ -336,6 +372,90 @@ def update_betting(
 
     return match
 
+
+
+
+@router.delete(
+    "/bulk",
+    status_code=status.HTTP_200_OK,
+)
+def delete_matches_bulk(
+    data: BulkMatchDeleteRequest,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin),
+):
+    # Remove duplicates while preserving the supplied IDs.
+    match_ids = list(dict.fromkeys(data.match_ids))
+
+    if not match_ids:
+        raise HTTPException(
+            status_code=400,
+            detail="No matches selected.",
+        )
+
+    # Only operate on matches that actually exist.
+    matches = (
+        db.query(Match)
+        .filter(Match.id.in_(match_ids))
+        .all()
+    )
+
+    found_ids = {match.id for match in matches}
+    missing_ids = [
+        match_id
+        for match_id in match_ids
+        if match_id not in found_ids
+    ]
+
+    if missing_ids:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Match(es) not found: {missing_ids}",
+        )
+
+    # Find all markets belonging to the selected matches.
+    markets = (
+        db.query(Market)
+        .filter(Market.match_id.in_(match_ids))
+        .all()
+    )
+
+    market_ids = [market.id for market in markets]
+
+    # Delete odds first because odds belong to markets.
+    deleted_odds = 0
+    if market_ids:
+        deleted_odds = (
+            db.query(Odd)
+            .filter(Odd.market_id.in_(market_ids))
+            .delete(synchronize_session=False)
+        )
+
+    # Delete markets second because markets belong to matches.
+    deleted_markets = 0
+    if match_ids:
+        deleted_markets = (
+            db.query(Market)
+            .filter(Market.match_id.in_(match_ids))
+            .delete(synchronize_session=False)
+        )
+
+    # Delete matches last.
+    deleted_matches = (
+        db.query(Match)
+        .filter(Match.id.in_(match_ids))
+        .delete(synchronize_session=False)
+    )
+
+    # One transaction for the entire operation.
+    db.commit()
+
+    return {
+        "message": "Matches deleted successfully.",
+        "deleted_matches": deleted_matches,
+        "deleted_markets": deleted_markets,
+        "deleted_odds": deleted_odds,
+    }
 
 @router.delete(
     "/{match_id}",

@@ -56,6 +56,7 @@ export default function Matches() {
   const [leagues, setLeagues] = useState([]);
   const [teams, setTeams] = useState([]);
   const [scoreDrafts, setScoreDrafts] = useState({});
+  const [selectedMatches, setSelectedMatches] = useState([]);
 
   const [form, setForm] = useState({
     league_id: "",
@@ -89,6 +90,11 @@ export default function Matches() {
       ]);
 
       setMatches(matchesRes.data);
+      setSelectedMatches((current) =>
+        current.filter((id) =>
+          matchesRes.data.some((match) => match.id === id)
+        )
+      );
       setLeagues(leaguesRes.data);
       setTeams(teamsRes.data);
 
@@ -264,6 +270,72 @@ export default function Matches() {
         away_score: awayScore,
       }
     );
+  }
+
+
+  function toggleMatchSelection(matchId) {
+    setSelectedMatches((current) =>
+      current.includes(matchId)
+        ? current.filter((id) => id !== matchId)
+        : [...current, matchId]
+    );
+  }
+
+  function toggleSelectAll() {
+    if (selectedMatches.length === matches.length) {
+      setSelectedMatches([]);
+    } else {
+      setSelectedMatches(matches.map((match) => match.id));
+    }
+  }
+
+  function clearSelection() {
+    setSelectedMatches([]);
+  }
+
+  async function deleteSelectedMatches() {
+    if (selectedMatches.length === 0) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete ${selectedMatches.length} selected match${
+        selectedMatches.length === 1 ? "" : "es"
+      }?\n\nThis will also delete their markets and odds.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setSaving(true);
+      setError("");
+      setMessage("");
+
+      await api.delete("/api/admin/matches/bulk", {
+        data: {
+          match_ids: selectedMatches,
+        },
+      });
+
+      const deletedCount = selectedMatches.length;
+
+      setSelectedMatches([]);
+
+      setMessage(
+        `${deletedCount} match${
+          deletedCount === 1 ? "" : "es"
+        } deleted successfully.`
+      );
+
+      await loadData();
+    } catch (err) {
+      setError(
+        err.response?.data?.detail ||
+          "Failed to delete selected matches."
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function deleteMatch(match) {
@@ -537,6 +609,93 @@ export default function Matches() {
 
         <h2>All Matches</h2>
 
+        {matches.length > 0 && (
+          <div
+            style={{
+              display: "flex",
+              gap: "10px",
+              flexWrap: "wrap",
+              alignItems: "center",
+              marginBottom: "16px",
+              padding: "14px",
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: "14px",
+            }}
+          >
+            <button
+              type="button"
+              onClick={toggleSelectAll}
+              disabled={saving}
+              style={{
+                border: 0,
+                borderRadius: "10px",
+                padding: "11px 14px",
+                background: "#4f46e5",
+                color: "#fff",
+                fontWeight: 800,
+                cursor: "pointer",
+              }}
+            >
+              {selectedMatches.length === matches.length
+                ? "☐ Clear All"
+                : "☑ Select All"}
+            </button>
+
+            {selectedMatches.length > 0 && (
+              <>
+                <button
+                  type="button"
+                  onClick={clearSelection}
+                  disabled={saving}
+                  style={{
+                    border: 0,
+                    borderRadius: "10px",
+                    padding: "11px 14px",
+                    background: "#64748b",
+                    color: "#fff",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                  }}
+                >
+                  Clear Selection
+                </button>
+
+                <button
+                  type="button"
+                  onClick={deleteSelectedMatches}
+                  disabled={saving}
+                  style={{
+                    border: 0,
+                    borderRadius: "10px",
+                    padding: "11px 14px",
+                    background: "#dc2626",
+                    color: "#fff",
+                    fontWeight: 900,
+                    cursor: "pointer",
+                  }}
+                >
+                  {saving
+                    ? "Deleting..."
+                    : `🗑 Delete Selected (${selectedMatches.length})`}
+                </button>
+              </>
+            )}
+
+            <span
+              style={{
+                marginLeft: "auto",
+                color: "#64748b",
+                fontSize: "13px",
+                fontWeight: 700,
+              }}
+            >
+              {selectedMatches.length} of {matches.length} selected
+            </span>
+          </div>
+        )}
+
+
         {loading ? (
           <p>Loading matches...</p>
         ) : matches.length === 0 ? (
@@ -562,6 +721,40 @@ export default function Matches() {
                 key={match.id}
                 style={{
                   background: "#fff",
+
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    marginBottom: "12px",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedMatches.includes(match.id)}
+                    onChange={() => toggleMatchSelection(match.id)}
+                    disabled={saving}
+                    style={{
+                      width: "20px",
+                      height: "20px",
+                      cursor: "pointer",
+                    }}
+                  />
+
+                  <label
+                    style={{
+                      fontSize: "13px",
+                      fontWeight: 800,
+                      color: "#64748b",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => toggleMatchSelection(match.id)}
+                  >
+                    Select match
+                  </label>
+                </div>
+
                   border: "1px solid #e2e8f0",
                   borderRadius: "18px",
                   padding: "18px",
