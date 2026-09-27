@@ -16,6 +16,7 @@ import Dashboard from "./pages/admin/Dashboard";
 import Leagues from "./pages/admin/Leagues";
 import Teams from "./pages/admin/Teams";
 import AdminMatches from "./pages/admin/Matches";
+import BulkCreateMatches from "./pages/admin/BulkCreateMatches";
 import Markets from "./pages/admin/Markets";
 import Odds from "./pages/admin/Odds";
 import Users from "./pages/admin/Users";
@@ -47,6 +48,10 @@ function App() {
             <Route path="/admin/leagues" element={<Leagues />} />
             <Route path="/admin/teams" element={<Teams />} />
             <Route path="/admin/matches" element={<AdminMatches />} />
+            <Route
+              path="/admin/matches/bulk-create"
+              element={<BulkCreateMatches />}
+            />
             <Route path="/admin/markets" element={<Markets />} />
             <Route path="/admin/odds" element={<Odds />} />
             <Route path="/admin/users" element={<Users />} />

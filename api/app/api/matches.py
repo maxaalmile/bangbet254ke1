@@ -1,4 +1,6 @@
 from datetime import datetime
+import requests
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
@@ -9,6 +11,7 @@ from app.core.database import get_db
 from app.models.league import League
 from app.models.match import Match
 from app.services.settlement import settle_match
+from app.services.betika_bulk import bulk_create_matches
 from app.models.team import Team
 from app.models.market import Market
 from app.models.odd import Odd
@@ -31,6 +34,90 @@ router = APIRouter(
 
 class BulkMatchDeleteRequest(BaseModel):
     match_ids: list[int]
+
+
+class BulkMatchCreateRequest(BaseModel):
+    start_date: str
+    start_time: str
+    end_date: str
+    end_time: str
+    count: int
+
+
+NAIROBI = ZoneInfo("Africa/Nairobi")
+
+
+@router.post(
+    "/bulk-create",
+    status_code=status.HTTP_200_OK,
+)
+def create_matches_bulk(
+    data: BulkMatchCreateRequest,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin),
+):
+    allowed_counts = {10, 20, 30, 50, 100}
+
+    if data.count not in allowed_counts:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Count must be one of: "
+                "10, 20, 30, 50, 100."
+            ),
+        )
+
+    try:
+        start_dt = datetime.strptime(
+            f"{data.start_date} {data.start_time}",
+            "%Y-%m-%d %H:%M",
+        ).replace(tzinfo=NAIROBI)
+
+        end_dt = datetime.strptime(
+            f"{data.end_date} {data.end_time}",
+            "%Y-%m-%d %H:%M",
+        ).replace(tzinfo=NAIROBI)
+
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Invalid date/time. "
+                "Use YYYY-MM-DD and HH:MM."
+            ),
+        )
+
+    if end_dt <= start_dt:
+        raise HTTPException(
+            status_code=400,
+            detail="End date/time must be after start date/time.",
+        )
+
+    # Keep serverless requests reasonable.
+    if (end_dt - start_dt).total_seconds() > 7 * 24 * 60 * 60:
+        raise HTTPException(
+            status_code=400,
+            detail="The maximum bulk-create window is 7 days.",
+        )
+
+    try:
+        return bulk_create_matches(
+            start_dt=start_dt,
+            end_dt=end_dt,
+            requested_count=data.count,
+        )
+
+    except requests.RequestException as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Betika request failed: {exc}",
+        )
+
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Bulk match creation failed: {exc}",
+        )
 
 
 @router.post(

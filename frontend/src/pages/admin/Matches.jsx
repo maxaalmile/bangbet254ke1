@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
 
 function formatDate(value) {
@@ -52,6 +53,7 @@ function StatusBadge({ children, type = "default" }) {
 }
 
 export default function Matches() {
+  const navigate = useNavigate();
   const [matches, setMatches] = useState([]);
   const [leagues, setLeagues] = useState([]);
   const [teams, setTeams] = useState([]);
@@ -370,6 +372,29 @@ export default function Matches() {
 
   return (
     <div className="page">
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          marginBottom: "18px",
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => navigate("/admin/matches/bulk-create")}
+          style={{
+            padding: "11px 18px",
+            border: "none",
+            borderRadius: "9px",
+            background: "#111827",
+            color: "#fff",
+            fontWeight: 900,
+            cursor: "pointer",
+          }}
+        >
+          ⚡ Create Bulk Matches
+        </button>
+      </div>
       <main
         className="container"
         style={{
